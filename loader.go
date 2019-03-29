@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-// Loader loads.
+// Loader loads values using multiple sources.
 type Loader struct {
 	sources map[string]Getter
 }
@@ -58,52 +58,48 @@ func loadValues(v interface{}, rv reflect.Value, rt reflect.Type, tagName string
 	for i := 0; i < rv.NumField(); i++ {
 		fv := rv.Field(i)
 		ft := rt.Field(i)
-		val, found := ft.Tag.Lookup(tagName)
-		if !found {
-			continue
-		}
-		tag := newTagValue(val, ft.Name)
 		if !fv.CanSet() {
 			return fmt.Errorf("config: field %s can't be set", ft.Name)
 		}
+
+		val, found, err := getTagValue(ft, tagName, getter)
+		if err != nil {
+			return err
+		}
+		if !found {
+			continue
+		}
+
 		switch fv.Kind() {
 		case reflect.Bool:
-			b, err := loadBool(tag, getter)
-			if err != nil {
-				return err
-			}
-			fv.SetBool(b)
+			fv.SetBool(boolValue(val))
 
 		case reflect.String:
-			s, err := loadString(tag, getter)
-			if err != nil {
-				return err
-			}
-			fv.SetString(s)
+			fv.SetString(val)
 
 		case reflect.Int64:
-			i, err := loadInt(64, tag, getter)
+			i, err := intValue(64, val)
 			if err != nil {
 				return err
 			}
 			fv.SetInt(i)
 
 		case reflect.Int32:
-			i, err := loadInt(32, tag, getter)
+			i, err := intValue(32, val)
 			if err != nil {
 				return err
 			}
 			fv.SetInt(i)
 
 		case reflect.Int16:
-			i, err := loadInt(16, tag, getter)
+			i, err := intValue(16, val)
 			if err != nil {
 				return err
 			}
 			fv.SetInt(i)
 
 		case reflect.Int8:
-			i, err := loadInt(8, tag, getter)
+			i, err := intValue(8, val)
 			if err != nil {
 				return err
 			}
@@ -111,6 +107,25 @@ func loadValues(v interface{}, rv reflect.Value, rt reflect.Type, tagName string
 		}
 	}
 	return nil
+}
+
+func getTagValue(ft reflect.StructField, tagName string, getter Getter) (val string, found bool, err error) {
+	tagValue, found := ft.Tag.Lookup(tagName)
+	if !found {
+		return
+	}
+	tag := newTagValue(tagValue, ft.Name)
+	val, err = getter(tag.name)
+	if err != nil {
+		return
+	}
+	if val == "" {
+		val, _ = ft.Tag.Lookup("default")
+	}
+	if missingValue(val, tag) {
+		err = missingValueError(tag.name)
+	}
+	return
 }
 
 func missingValue(val string, tag tagValue) bool {
@@ -121,35 +136,10 @@ func missingValueError(key string) error {
 	return fmt.Errorf("config: missing value for key '%s'", key)
 }
 
-func loadBool(tag tagValue, getter Getter) (bool, error) {
-	val, err := getter(tag.name)
-	if err != nil {
-		return false, err
-	}
-	if missingValue(val, tag) {
-		return false, missingValueError(tag.name)
-	}
-	return val == "true" || val == "1", nil
+func boolValue(v string) bool {
+	return v == "true" || v == "1"
 }
 
-func loadString(tag tagValue, getter Getter) (string, error) {
-	val, err := getter(tag.name)
-	if err != nil {
-		return "", err
-	}
-	if missingValue(val, tag) {
-		return "", missingValueError(tag.name)
-	}
-	return val, nil
-}
-
-func loadInt(bitSize int, tag tagValue, getter Getter) (int64, error) {
-	val, err := getter(tag.name)
-	if err != nil {
-		return 0, err
-	}
-	if missingValue(val, tag) {
-		return 0, missingValueError(tag.name)
-	}
-	return strconv.ParseInt(val, 10, bitSize)
+func intValue(bitSize int, v string) (int64, error) {
+	return strconv.ParseInt(v, 10, bitSize)
 }

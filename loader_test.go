@@ -60,6 +60,14 @@ func TestA(t *testing.T) {
 			err: "config: missing value for key 'ttt'",
 		},
 		{
+			desc: "error getting value",
+			v: &struct {
+				T string `test:"ttt"`
+			}{},
+			values: map[string]string{},
+			err:    "error getting key ttt",
+		},
+		{
 			desc: "does not fail when optional fields are not set",
 			v: &struct {
 				T string `test:"ttt,optional"`
@@ -84,14 +92,18 @@ func TestA(t *testing.T) {
 			desc: "string field",
 			v: &struct {
 				T string `test:"field"`
+				D string `test:"other" default:"venice"`
 			}{},
 			values: map[string]string{
 				"field": "hello",
+				"other": "",
 			},
 			out: &struct {
 				T string `test:"field"`
+				D string `test:"other" default:"venice"`
 			}{
 				T: "hello",
+				D: "venice",
 			},
 		},
 		{
@@ -102,6 +114,9 @@ func TestA(t *testing.T) {
 				T3 bool `test:"field3"`
 				T4 bool `test:"field4"`
 				T5 bool `test:"field5"`
+				D1 bool `test:"other1" default:"true"`
+				D2 bool `test:"other2" default:"1"`
+				D3 bool `test:"other3" default:"0"`
 			}{},
 			values: map[string]string{
 				"field1": "true",
@@ -109,6 +124,9 @@ func TestA(t *testing.T) {
 				"field3": "other",
 				"field4": "0",
 				"field5": "false",
+				"other1": "",
+				"other2": "",
+				"other3": "",
 			},
 			out: &struct {
 				T1 bool `test:"field1"`
@@ -116,12 +134,18 @@ func TestA(t *testing.T) {
 				T3 bool `test:"field3"`
 				T4 bool `test:"field4"`
 				T5 bool `test:"field5"`
+				D1 bool `test:"other1" default:"true"`
+				D2 bool `test:"other2" default:"1"`
+				D3 bool `test:"other3" default:"0"`
 			}{
 				T1: true,
 				T2: true,
 				T3: false,
 				T4: false,
 				T5: false,
+				D1: true,
+				D2: true,
+				D3: false,
 			},
 		},
 		{
@@ -151,23 +175,39 @@ func TestA(t *testing.T) {
 				T2 int32 `test:"field2"`
 				T3 int16 `test:"field3"`
 				T4 int8  `test:"field4"`
+				D1 int64 `test:"other1" default:"91"`
+				D2 int32 `test:"other2" default:"92"`
+				D3 int16 `test:"other3" default:"93"`
+				D4 int8  `test:"other4" default:"94"`
 			}{},
 			values: map[string]string{
 				"field1": "11",
 				"field2": "22",
 				"field3": "33",
 				"field4": "44",
+				"other1": "",
+				"other2": "",
+				"other3": "",
+				"other4": "",
 			},
 			out: &struct {
 				T1 int64 `test:"field1"`
 				T2 int32 `test:"field2"`
 				T3 int16 `test:"field3"`
 				T4 int8  `test:"field4"`
+				D1 int64 `test:"other1" default:"91"`
+				D2 int32 `test:"other2" default:"92"`
+				D3 int16 `test:"other3" default:"93"`
+				D4 int8  `test:"other4" default:"94"`
 			}{
 				T1: 11,
 				T2: 22,
 				T3: 33,
 				T4: 44,
+				D1: 91,
+				D2: 92,
+				D3: 93,
+				D4: 94,
 			},
 		},
 	}
@@ -190,24 +230,3 @@ func TestA(t *testing.T) {
 		})
 	}
 }
-
-// func Test(t *testing.T) {
-// 	type data struct {
-// 		A string `tt:"va"`
-// 		B string `tt:"vb,optional"`
-// 	}
-// 	l := NewLoader(&testSource{
-// 		values: map[string]string{
-// 			"va": "test-a",
-// 			"vb": "",
-// 		},
-// 	})
-// 	var d data
-// 	err := l.Load(&d)
-// 	if err != nil {
-// 		t.Fatalf("unexpected error: %v", err)
-// 	}
-// 	if d.A != "test-a" {
-// 		t.Errorf("expected `a` to be '%s' but was '%s'", "test-a", d.A)
-// 	}
-// }

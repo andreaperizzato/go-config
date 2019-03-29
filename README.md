@@ -5,31 +5,36 @@
 ```go
 package main
 
-import "github.com/andreaperizzato/go-config"
+import (
+	"fmt"
+	"log"
+
+	"github.com/andreaperizzato/go-config"
+)
 
 type Settings struct {
-  BaseURL         string  `env:"BASE_URL"`
-  LogLevel        string  `env:"LOG_LEVEL,optional"`
-  MaxConnections  int8    `env:"MAX_CONNECTIONS"`
-  DisableSSL      bool    `env:"DISABLE_SSL,optional"`
-  JWTSecret       string  `ssm:"jwt_secret"`
+	BaseURL        string `env:"BASE_URL"`
+	LogLevel       string `env:"LOG_LEVEL,optional"`
+	MaxConnections int8   `env:"MAX_CONNECTIONS" default:"2"`
+	DisableSSL     bool   `env:"DISABLE_SSL,optional"`
+	JWTSecret      string `ssm:"jwt_secret"`
 }
 
 func main() {
-  l := config.NewLoader(
-    // Load from the environment (tag "env").
-    config.NewEnvSource(),
-    // Load from AWS SSM (tag "ssm").
-    config.NewSSMSource(),
-  )
+	l := config.NewLoader(
+		// Load from the environment (tag "env").
+		config.NewEnvSource(),
+		// Load from AWS SSM (tag "ssm").
+		config.NewSSMSource(),
+	)
 
-  var s Settings
-  err := l.Load(&s)
-  if err != nil {
-    log.Fatal(err)
-  }
+	var s Settings
+	err := l.Load(&s)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-  fmt.Println(s)
+	fmt.Println(s)
 }
 ```
 
@@ -40,6 +45,7 @@ func main() {
 - Supports `string`, `int8`, `int16`, `int32`, `int64`
 - Supports `bool` setting `true` when the value is `"true"` or `"1"`
 - Fields can be optional
+- Fields can have default values
 - Add your own sources
 
 ## Available sources

@@ -7,7 +7,7 @@ type tagValue struct {
 	optional bool
 }
 
-func newTagValue(tag string, fieldName string) tagValue {
+func newTagValue(tag, fieldName string) tagValue {
 	bits := strings.Split(tag, ",")
 	if len(bits) == 0 || bits[0] == "" {
 		return tagValue{name: fieldName}
