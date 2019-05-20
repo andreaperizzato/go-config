@@ -104,6 +104,14 @@ func loadValues(v interface{}, rv reflect.Value, rt reflect.Type, tagName string
 				return err
 			}
 			fv.SetInt(i)
+
+		case reflect.Int:
+			i, err := intValue(0, val)
+			if err != nil {
+				return err
+			}
+			fv.SetInt(i)
+
 		}
 	}
 	return nil
