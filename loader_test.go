@@ -175,39 +175,47 @@ func TestA(t *testing.T) {
 				T2 int32 `test:"field2"`
 				T3 int16 `test:"field3"`
 				T4 int8  `test:"field4"`
+				T5 int   `test:"field5"`
 				D1 int64 `test:"other1" default:"91"`
 				D2 int32 `test:"other2" default:"92"`
 				D3 int16 `test:"other3" default:"93"`
 				D4 int8  `test:"other4" default:"94"`
+				D5 int   `test:"other5" default:"95"`
 			}{},
 			values: map[string]string{
 				"field1": "11",
 				"field2": "22",
 				"field3": "33",
 				"field4": "44",
+				"field5": "55",
 				"other1": "",
 				"other2": "",
 				"other3": "",
 				"other4": "",
+				"other5": "",
 			},
 			out: &struct {
 				T1 int64 `test:"field1"`
 				T2 int32 `test:"field2"`
 				T3 int16 `test:"field3"`
 				T4 int8  `test:"field4"`
+				T5 int   `test:"field5"`
 				D1 int64 `test:"other1" default:"91"`
 				D2 int32 `test:"other2" default:"92"`
 				D3 int16 `test:"other3" default:"93"`
 				D4 int8  `test:"other4" default:"94"`
+				D5 int   `test:"other5" default:"95"`
 			}{
 				T1: 11,
 				T2: 22,
 				T3: 33,
 				T4: 44,
+				T5: 55,
 				D1: 91,
 				D2: 92,
 				D3: 93,
 				D4: 94,
+				D5: 95,
 			},
 		},
 	}
