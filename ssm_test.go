@@ -3,20 +3,22 @@ package config
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestSSMSource(t *testing.T) {
+	testParameterName := "test/parameter/name"
+	testParameterValue := "parameter_value"
 	client := mockSSM{
 		getParameter: func(in *ssm.GetParameterInput) (out *ssm.GetParameterOutput, err error) {
-			assert.Equal(t, "dunderMifflin/michaelScott/catchPhrase", *in.Name)
+			if *in.Name != testParameterName {
+				t.Fatalf("expected parameter name to be %s, got %s", testParameterName, *in.Name)
+			}
 
 			out = &ssm.GetParameterOutput{
 				Parameter: &ssm.Parameter{
-					Value: aws.String("That's what she said"),
+					Value: &testParameterValue,
 				},
 			}
 			return
@@ -26,12 +28,16 @@ func TestSSMSource(t *testing.T) {
 
 	l := NewLoader(s)
 	sett := struct {
-		TestParameter string `ssm:"dunderMifflin/michaelScott/catchPhrase"`
+		TestParameter string `ssm:"test/parameter/name"`
 	}{}
 
 	err := l.Load(&sett)
-	assert.NoError(t, err)
-	assert.Equal(t, "That's what she said", sett.TestParameter)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	if sett.TestParameter != testParameterValue {
+		t.Fatalf("expected value to be %s, got %s", testParameterValue, sett.TestParameter)
+	}
 }
 
 type mockSSM struct {
