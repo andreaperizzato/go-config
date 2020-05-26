@@ -4,6 +4,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 )
 
 // SSMTag is the name of the tag to load variables from SSM.
@@ -16,14 +17,14 @@ func NewSSMSource() Source {
 }
 
 // NewSSMSourceWithClient create a Source for a values stored in SSM.
-func NewSSMSourceWithClient(svc *ssm.SSM) Source {
+func NewSSMSourceWithClient(svc ssmiface.SSMAPI) Source {
 	return &source{
 		tag: SSMTag,
 		get: getFromSSM(svc),
 	}
 }
 
-func getFromSSM(svc *ssm.SSM) func(key string) (string, error) {
+func getFromSSM(svc ssmiface.SSMAPI) func(key string) (string, error) {
 	return func(key string) (string, error) {
 		out, err := svc.GetParameter(&ssm.GetParameterInput{
 			Name: aws.String(key),
