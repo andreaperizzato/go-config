@@ -24,19 +24,16 @@ func TestSSMSource(t *testing.T) {
 			return
 		},
 	}
-	s := NewSSMSourceWithClient(&client)
-
-	l := NewLoader(s)
+	l := NewLoader(NewSSMSourceWithClient(&client))
 	sett := struct {
 		TestParameter string `ssm:"test/parameter/name"`
 	}{}
-
 	err := l.Load(&sett)
 	if err != nil {
-		t.Fatalf("unexpected error %v", err)
+		t.Fatalf("failed to load config with err: %v", err)
 	}
 	if sett.TestParameter != testParameterValue {
-		t.Fatalf("expected value to be %s, got %s", testParameterValue, sett.TestParameter)
+		t.Fatalf("expected parameter value to be %s, got %s", testParameterValue, sett.TestParameter)
 	}
 }
 
@@ -59,7 +56,10 @@ func TestSSMSourceWithSubstitutions(t *testing.T) {
 	subs := map[string]string{
 		"stage": "prod",
 	}
-	s := NewSSMSourceWithSubstitutionsWithClient(&client, subs)
+	s := NewSSMSourceWithConfig(SSMSourceConfig{
+		Service:       client,
+		Substitutions: subs,
+	})
 
 	l := NewLoader(s)
 	sett := struct {
@@ -68,7 +68,7 @@ func TestSSMSourceWithSubstitutions(t *testing.T) {
 
 	err := l.Load(&sett)
 	if err != nil {
-		t.Fatalf("unexpected error %v", err)
+		t.Fatalf("failed to load config with err: %v", err)
 	}
 	if sett.TestParameter != testParameterValue {
 		t.Fatalf("expected value to be %s, got %s", testParameterValue, sett.TestParameter)
