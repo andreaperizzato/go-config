@@ -38,11 +38,13 @@ func (s *ssmSource) Tag() string {
 
 func (s *ssmSource) Get(tag tagValue) (string, error) {
 	name := tag.name
+	_, isSecure := tag.flags[flagSecure]
 	if s.subs != nil {
 		name = getParamName(tag.name, s.subs)
 	}
 	out, err := s.svc.GetParameter(&ssm.GetParameterInput{
-		Name: &name,
+		Name:           &name,
+		WithDecryption: &isSecure,
 	})
 	if err != nil {
 		return "", err

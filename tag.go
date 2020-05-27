@@ -11,6 +11,7 @@ type tagValue struct {
 type flag string
 
 var flagOptional flag = "optional"
+var flagSecure flag = "secure"
 
 func newTagValue(tag, fieldName string) tagValue {
 	bits := strings.Split(tag, ",")
