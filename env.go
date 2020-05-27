@@ -13,6 +13,6 @@ func NewEnvSource() Source {
 	}
 }
 
-func loadFromEnv(key string) (string, error) {
-	return os.Getenv(key), nil
+func loadFromEnv(tag tagValue) (string, error) {
+	return os.Getenv(tag.name), nil
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
@@ -37,12 +36,13 @@ func (s *ssmSource) Tag() string {
 	return SSMTag
 }
 
-func (s *ssmSource) Get(key string) (string, error) {
+func (s *ssmSource) Get(tag tagValue) (string, error) {
+	name := tag.name
 	if s.subs != nil {
-		key = getParamName(key, s.subs)
+		name = getParamName(tag.name, s.subs)
 	}
 	out, err := s.svc.GetParameter(&ssm.GetParameterInput{
-		Name: aws.String(key),
+		Name: &name,
 	})
 	if err != nil {
 		return "", err

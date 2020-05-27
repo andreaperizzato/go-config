@@ -12,7 +12,8 @@ func TestEnvSource(t *testing.T) {
 	}
 
 	// Value not set in the enviornment.
-	v, err := s.Get("unset-env")
+	tag := tagValue{name: "unset-env"}
+	v, err := s.Get(tag)
 	if err != nil {
 		t.Fatalf("unexpected error getting value for key '%s': %v", "unset-env", err)
 	}
@@ -25,7 +26,8 @@ func TestEnvSource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error setting env variable: %v", err)
 	}
-	v, err = s.Get("testenv")
+	tag = tagValue{name: "testenv"}
+	v, err = s.Get(tag)
 	if err != nil {
 		t.Fatalf("unexpected error getting value for key '%s': %v", "testenv", err)
 	}

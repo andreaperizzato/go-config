@@ -123,7 +123,7 @@ func getTagValue(ft reflect.StructField, tagName string, getter Getter) (val str
 		return
 	}
 	tag := newTagValue(tagValue, ft.Name)
-	val, err = getter(tag.name)
+	val, err = getter(tag)
 	if err != nil {
 		return
 	}
