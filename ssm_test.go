@@ -20,6 +20,9 @@ func TestSSMSource(t *testing.T) {
 			if *in.Name != testParameterName {
 				t.Fatalf("expected parameter name to be %s, got %s", testParameterName, *in.Name)
 			}
+			if in.WithDecryption != nil && *in.WithDecryption == true {
+				t.Fatalf("expected WithDecryption to be false, got %v", *in.WithDecryption)
+			}
 
 			out = &ssm.GetParameterOutput{
 				Parameter: &ssm.Parameter{
@@ -67,6 +70,9 @@ func TestSSMSourceWithSubstitutions(t *testing.T) {
 		getParameter: func(in *ssm.GetParameterInput) (out *ssm.GetParameterOutput, err error) {
 			if *in.Name != "project/prod/parameter" {
 				t.Fatalf("expected parameter name to be %s, got %s", "project/prod/parameter", *in.Name)
+			}
+			if in.WithDecryption != nil && *in.WithDecryption == true {
+				t.Fatalf("expected WithDecryption to be false, got %v", *in.WithDecryption)
 			}
 
 			out = &ssm.GetParameterOutput{
