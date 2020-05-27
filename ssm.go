@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -39,12 +38,8 @@ func (s *ssmSource) Tag() string {
 }
 
 func (s *ssmSource) Get(key string) (string, error) {
-	var err error
 	if s.subs != nil {
-		key, err = getParamName(key, s.subs)
-		if err != nil {
-			return "", err
-		}
+		key = getParamName(key, s.subs)
 	}
 	out, err := s.svc.GetParameter(&ssm.GetParameterInput{
 		Name: aws.String(key),
@@ -77,18 +72,11 @@ func NewSSMSourceWithConfig(cfg SSMSourceConfig) Source {
 	}
 }
 
-func getParamName(source string, subs map[string]string) (result string, err error) {
-	paramsCount := strings.Count(source, "$")
-	re := regexp.MustCompile("\\$\\w+")
-	params := re.FindAll([]byte(source), paramsCount)
+func getParamName(source string, subs map[string]string) (result string) {
 	result = source
-	for _, param := range params {
-		name := string(param[1:]) // remove $
-		val, found := subs[name]
-		if !found {
-			return "", fmt.Errorf("could not find substitution for parameter '%s'", name)
-		}
-		result = strings.Replace(result, string(param), val, 1)
+	for k, v := range subs {
+		sub := fmt.Sprintf("$%s", k)
+		result = strings.ReplaceAll(result, sub, v)
 	}
 	return
 }
