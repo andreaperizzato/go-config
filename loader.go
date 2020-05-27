@@ -137,7 +137,8 @@ func getTagValue(ft reflect.StructField, tagName string, getter Getter) (val str
 }
 
 func missingValue(val string, tag tagValue) bool {
-	return val == "" && !tag.optional
+	_, isOptional := tag.flags[flagOptional]
+	return val == "" && !isOptional
 }
 
 func missingValueError(key string) error {

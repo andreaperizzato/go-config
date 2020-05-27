@@ -5,7 +5,12 @@ import "strings"
 type tagValue struct {
 	name     string
 	optional bool
+	flags    map[flag]struct{}
 }
+
+type flag string
+
+var flagOptional flag = "optional"
 
 func newTagValue(tag, fieldName string) tagValue {
 	bits := strings.Split(tag, ",")
@@ -14,7 +19,10 @@ func newTagValue(tag, fieldName string) tagValue {
 	}
 	t := tagValue{name: bits[0]}
 	if len(bits) > 1 {
-		t.optional = bits[1] == "optional"
+		t.flags = make(map[flag]struct{})
+		for _, k := range bits[1:] {
+			t.flags[flag(k)] = struct{}{}
+		}
 	}
 	return t
 }
