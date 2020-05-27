@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -10,7 +11,11 @@ import (
 func TestSSMSource(t *testing.T) {
 	testParameterName := "test/parameter/name"
 	testParameterValue := "parameter_value"
-	client := mockSSM{
+	sett := struct {
+		TestParameter string `ssm:"test/parameter/name"`
+	}{}
+
+	svc := mockSSM{
 		getParameter: func(in *ssm.GetParameterInput) (out *ssm.GetParameterOutput, err error) {
 			if *in.Name != testParameterName {
 				t.Fatalf("expected parameter name to be %s, got %s", testParameterName, *in.Name)
@@ -24,10 +29,9 @@ func TestSSMSource(t *testing.T) {
 			return
 		},
 	}
-	l := NewLoader(NewSSMSourceWithClient(&client))
-	sett := struct {
-		TestParameter string `ssm:"test/parameter/name"`
-	}{}
+
+	src := NewSSMSourceWithClient(&svc)
+	l := NewLoader(src)
 	err := l.Load(&sett)
 	if err != nil {
 		t.Fatalf("failed to load config with err: %v", err)
@@ -35,11 +39,31 @@ func TestSSMSource(t *testing.T) {
 	if sett.TestParameter != testParameterValue {
 		t.Fatalf("expected parameter value to be %s, got %s", testParameterValue, sett.TestParameter)
 	}
+
+	// Test when SSM.GetParameter fails
+	svc = mockSSM{
+		getParameter: func(in *ssm.GetParameterInput) (out *ssm.GetParameterOutput, err error) {
+			err = errors.New("failed")
+			return
+		},
+	}
+	src = NewSSMSourceWithClient(&svc)
+	l = NewLoader(src)
+	err = l.Load(&sett)
+	if err == nil {
+		t.Fatal("expected to get an error, got nil")
+	}
+	if err.Error() != "failed" {
+		t.Fatalf("expected to get error message 'failed', got: '%s'", err.Error())
+	}
 }
 
 func TestSSMSourceWithSubstitutions(t *testing.T) {
 	testParameterValue := "parameter_value"
-	client := mockSSM{
+	sett := struct {
+		TestParameter string `ssm:"project/$stage/parameter"`
+	}{}
+	svc := mockSSM{
 		getParameter: func(in *ssm.GetParameterInput) (out *ssm.GetParameterOutput, err error) {
 			if *in.Name != "project/prod/parameter" {
 				t.Fatalf("expected parameter name to be %s, got %s", "project/prod/parameter", *in.Name)
@@ -56,22 +80,40 @@ func TestSSMSourceWithSubstitutions(t *testing.T) {
 	subs := map[string]string{
 		"stage": "prod",
 	}
-	s := NewSSMSourceWithConfig(SSMSourceConfig{
-		Service:       client,
+
+	src := NewSSMSourceWithConfig(SSMSourceConfig{
+		Service:       svc,
 		Substitutions: subs,
 	})
-
-	l := NewLoader(s)
-	sett := struct {
-		TestParameter string `ssm:"project/$stage/parameter"`
-	}{}
-
+	l := NewLoader(src)
 	err := l.Load(&sett)
 	if err != nil {
 		t.Fatalf("failed to load config with err: %v", err)
 	}
 	if sett.TestParameter != testParameterValue {
 		t.Fatalf("expected value to be %s, got %s", testParameterValue, sett.TestParameter)
+	}
+
+	// Test error with substitutions
+	svc = mockSSM{
+		getParameter: func(in *ssm.GetParameterInput) (out *ssm.GetParameterOutput, err error) {
+			t.Fatal("test should not reach this point")
+			return
+		},
+	}
+	subs = map[string]string{}
+
+	src = NewSSMSourceWithConfig(SSMSourceConfig{
+		Service:       svc,
+		Substitutions: subs,
+	})
+	l = NewLoader(src)
+	err = l.Load(&sett)
+	if err == nil {
+		t.Fatal("expected to get an error, got nil")
+	}
+	if err.Error() != "could not find substitution for parameter 'stage'" {
+		t.Fatalf("expected to get error message 'failed', got: '%s'", err.Error())
 	}
 }
 

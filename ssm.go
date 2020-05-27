@@ -32,6 +32,8 @@ type ssmSource struct {
 	subs map[string]string
 }
 
+var _ssmSourceIfaceCheck Source = &ssmSource{}
+
 func (s *ssmSource) Tag() string {
 	return SSMTag
 }
@@ -81,10 +83,10 @@ func getParamName(source string, subs map[string]string) (result string, err err
 	params := re.FindAll([]byte(source), paramsCount)
 	result = source
 	for _, param := range params {
-		name := string(param[1:])
+		name := string(param[1:]) // remove $
 		val, found := subs[name]
 		if !found {
-			return "", fmt.Errorf("failed") // TODO: return a better error
+			return "", fmt.Errorf("could not find substitution for parameter '%s'", name)
 		}
 		result = strings.Replace(result, string(param), val, 1)
 	}
