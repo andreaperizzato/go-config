@@ -20,6 +20,9 @@ func TestSSMSource(t *testing.T) {
 			if *in.Name != testParameterName {
 				t.Fatalf("expected parameter name to be %s, got %s", testParameterName, *in.Name)
 			}
+			if in.WithDecryption != nil && *in.WithDecryption == true {
+				t.Fatalf("expected WithDecryption to be false, got %v", *in.WithDecryption)
+			}
 
 			out = &ssm.GetParameterOutput{
 				Parameter: &ssm.Parameter{
@@ -68,6 +71,9 @@ func TestSSMSourceWithSubstitutions(t *testing.T) {
 			if *in.Name != "project/prod/parameter" {
 				t.Fatalf("expected parameter name to be %s, got %s", "project/prod/parameter", *in.Name)
 			}
+			if in.WithDecryption != nil && *in.WithDecryption == true {
+				t.Fatalf("expected WithDecryption to be false, got %v", *in.WithDecryption)
+			}
 
 			out = &ssm.GetParameterOutput{
 				Parameter: &ssm.Parameter{
@@ -92,6 +98,44 @@ func TestSSMSourceWithSubstitutions(t *testing.T) {
 	}
 	if sett.TestParameter != testParameterValue {
 		t.Fatalf("expected value to be %s, got %s", testParameterValue, sett.TestParameter)
+	}
+}
+
+func TestSSMSecureStrings(t *testing.T) {
+	testParameterName := "test/parameter/name"
+	testParameterValue := "parameter_value"
+	sett := struct {
+		TestParameter string `ssm:"test/parameter/name,secure"`
+	}{}
+
+	svc := mockSSM{
+		getParameter: func(in *ssm.GetParameterInput) (out *ssm.GetParameterOutput, err error) {
+			if *in.Name != testParameterName {
+				t.Fatalf("expected parameter name to be %s, got %s", testParameterName, *in.Name)
+			}
+			if in.WithDecryption == nil {
+				t.Fatal("expected input.WithDecryption to be true, got nil")
+			}
+			if *in.WithDecryption == false {
+				t.Fatal("expected input.WithDecryption to be true, got false")
+			}
+			out = &ssm.GetParameterOutput{
+				Parameter: &ssm.Parameter{
+					Value: &testParameterValue,
+				},
+			}
+			return
+		},
+	}
+
+	src := NewSSMSourceWithClient(&svc)
+	l := NewLoader(src)
+	err := l.Load(&sett)
+	if err != nil {
+		t.Fatalf("failed to load config with err: %v", err)
+	}
+	if sett.TestParameter != testParameterValue {
+		t.Fatalf("expected parameter value to be %s, got %s", testParameterValue, sett.TestParameter)
 	}
 }
 

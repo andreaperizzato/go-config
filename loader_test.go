@@ -13,10 +13,10 @@ type testSource struct {
 func (ts *testSource) Tag() string {
 	return "test"
 }
-func (ts *testSource) Get(key string) (string, error) {
-	v, found := ts.values[key]
+func (ts *testSource) Get(tag TagValue) (string, error) {
+	v, found := ts.values[tag.Name]
 	if !found {
-		return "", fmt.Errorf("error getting key %s", key)
+		return "", fmt.Errorf("error getting key %s", tag.Name)
 	}
 	return v, nil
 }
