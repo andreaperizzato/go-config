@@ -5,7 +5,13 @@ import "strings"
 // TagValue is the parsed version of a struct field's tag
 type TagValue struct {
 	Name  string
-	Flags map[string]struct{}
+	flags map[string]struct{}
+}
+
+// HasFlag returns a boolean indicating if a TagValue has a particular flag
+func (t TagValue) HasFlag(f string) bool {
+	_, found := t.flags[f]
+	return found
 }
 
 func newTagValue(tag, fieldName string) TagValue {
@@ -15,9 +21,9 @@ func newTagValue(tag, fieldName string) TagValue {
 	}
 	t := TagValue{Name: bits[0]}
 	if len(bits) > 1 {
-		t.Flags = make(map[string]struct{})
+		t.flags = make(map[string]struct{})
 		for _, k := range bits[1:] {
-			t.Flags[strings.TrimSpace(k)] = struct{}{}
+			t.flags[strings.TrimSpace(k)] = struct{}{}
 		}
 	}
 	return t
