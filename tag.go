@@ -17,7 +17,7 @@ func newTagValue(tag, fieldName string) TagValue {
 	if len(bits) > 1 {
 		t.Flags = make(map[string]struct{})
 		for _, k := range bits[1:] {
-			t.Flags[k] = struct{}{}
+			t.Flags[strings.TrimSpace(k)] = struct{}{}
 		}
 	}
 	return t
