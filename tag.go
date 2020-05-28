@@ -2,27 +2,22 @@ package config
 
 import "strings"
 
-type tagValue struct {
-	name     string
-	optional bool
-	flags    map[flag]struct{}
+// TagValue is the parsed version of a struct field's tag
+type TagValue struct {
+	Name  string
+	Flags map[string]struct{}
 }
 
-type flag string
-
-var flagOptional flag = "optional"
-var flagSecure flag = "secure"
-
-func newTagValue(tag, fieldName string) tagValue {
+func newTagValue(tag, fieldName string) TagValue {
 	bits := strings.Split(tag, ",")
 	if len(bits) == 0 || bits[0] == "" {
-		return tagValue{name: fieldName}
+		return TagValue{Name: fieldName}
 	}
-	t := tagValue{name: bits[0]}
+	t := TagValue{Name: bits[0]}
 	if len(bits) > 1 {
-		t.flags = make(map[flag]struct{})
+		t.Flags = make(map[string]struct{})
 		for _, k := range bits[1:] {
-			t.flags[flag(k)] = struct{}{}
+			t.Flags[k] = struct{}{}
 		}
 	}
 	return t

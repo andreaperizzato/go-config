@@ -131,13 +131,13 @@ func getTagValue(ft reflect.StructField, tagName string, getter Getter) (val str
 		val, _ = ft.Tag.Lookup("default")
 	}
 	if missingValue(val, tag) {
-		err = missingValueError(tag.name)
+		err = missingValueError(tag.Name)
 	}
 	return
 }
 
-func missingValue(val string, tag tagValue) bool {
-	_, isOptional := tag.flags[flagOptional]
+func missingValue(val string, tag TagValue) bool {
+	_, isOptional := tag.Flags["optional"]
 	return val == "" && !isOptional
 }
 
