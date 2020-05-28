@@ -9,19 +9,15 @@ import (
 
 // Loader loads values using multiple sources.
 type Loader struct {
-	sources map[string]Getter
+	sources []Source
 }
 
 // NewLoader creates a new Loader that uses
 // all the sources.
 func NewLoader(scs ...Source) *Loader {
-	l := Loader{
-		sources: make(map[string]Getter, len(scs)),
+	return &Loader{
+		sources: scs,
 	}
-	for _, s := range scs {
-		l.sources[s.Tag()] = s.Get
-	}
-	return &l
 }
 
 // Load reads the.
@@ -32,13 +28,40 @@ func (c *Loader) Load(v interface{}) error {
 		return err
 	}
 	rt := reflect.TypeOf(v).Elem()
-	for t, getter := range c.sources {
-		err := loadValues(v, rv, rt, t, getter)
+	for i := 0; i < rv.NumField(); i++ {
+		ft := rt.Field(i)
+		fv := rv.Field(i)
+		set, err := getFieldSetter(fv, ft)
+		if err != nil {
+			return err
+		}
+
+		val, err := loadFieldValue(ft, c.sources)
+		if err != nil {
+			return err
+		}
+
+		if val == "" {
+			continue
+		}
+
+		err = set(fv, val)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func getFieldSetter(fv reflect.Value, ft reflect.StructField) (fieldSetter, error) {
+	if !fv.CanSet() {
+		return nil, fmt.Errorf("config: field %s can't be set", ft.Name)
+	}
+	set, _ := setters[fv.Kind()]
+	if set == nil {
+		return nil, fmt.Errorf("config: field type %s is not supported", fv.Type().Name())
+	}
+	return set, nil
 }
 
 func getWritableValue(rv reflect.Value) (wv reflect.Value, err error) {
@@ -54,100 +77,82 @@ func getWritableValue(rv reflect.Value) (wv reflect.Value, err error) {
 	return
 }
 
-func loadValues(v interface{}, rv reflect.Value, rt reflect.Type, tagName string, getter Getter) error {
-	for i := 0; i < rv.NumField(); i++ {
-		fv := rv.Field(i)
-		ft := rt.Field(i)
-		if !fv.CanSet() {
-			return fmt.Errorf("config: field %s can't be set", ft.Name)
-		}
-
-		val, found, err := getTagValue(ft, tagName, getter)
-		if err != nil {
-			return err
-		}
+func loadFieldValue(ft reflect.StructField, sources []Source) (value string, err error) {
+	hasDeprecatedOptionalFlag := false
+	matchedTags := 0
+	for _, s := range sources {
+		tagValue, found := ft.Tag.Lookup(s.Tag())
 		if !found {
 			continue
 		}
-
-		switch fv.Kind() {
-		case reflect.Bool:
-			fv.SetBool(boolValue(val))
-
-		case reflect.String:
-			fv.SetString(val)
-
-		case reflect.Int64:
-			i, err := intValue(64, val)
-			if err != nil {
-				return err
-			}
-			fv.SetInt(i)
-
-		case reflect.Int32:
-			i, err := intValue(32, val)
-			if err != nil {
-				return err
-			}
-			fv.SetInt(i)
-
-		case reflect.Int16:
-			i, err := intValue(16, val)
-			if err != nil {
-				return err
-			}
-			fv.SetInt(i)
-
-		case reflect.Int8:
-			i, err := intValue(8, val)
-			if err != nil {
-				return err
-			}
-			fv.SetInt(i)
-
-		case reflect.Int:
-			i, err := intValue(0, val)
-			if err != nil {
-				return err
-			}
-			fv.SetInt(i)
-
+		matchedTags++
+		tag := newTagValue(tagValue, ft.Name)
+		newValue, err := s.Get(tag)
+		if err != nil {
+			return "", fmt.Errorf("config: error loading field %v for tag %s: %v", ft.Name, s.Tag(), err)
 		}
+		if newValue != "" {
+			value = newValue
+		}
+		hasDeprecatedOptionalFlag = tag.HasFlag("optional")
 	}
-	return nil
-}
+	if matchedTags == 0 {
+		return
+	}
 
-func getTagValue(ft reflect.StructField, tagName string, getter Getter) (val string, found bool, err error) {
-	tagValue, found := ft.Tag.Lookup(tagName)
-	if !found {
+	if value != "" {
 		return
 	}
-	tag := newTagValue(tagValue, ft.Name)
-	val, err = getter(tag)
-	if err != nil {
-		return
+
+	hasDefault := false
+	if value == "" {
+		value, hasDefault = ft.Tag.Lookup("default")
 	}
-	if val == "" {
-		val, _ = ft.Tag.Lookup("default")
+
+	// Previous version of this package supported an optional flag: env:"VAR,optional"
+	// which would prevent the loader from failing when the field is not set.
+	// This was supported only for single tags and has now been replaced with the default tag.
+	// The following condition explicitly checks for that case and handles it in order to be
+	// retro-compatible.
+	if value == "" && !hasDefault && matchedTags == 1 && hasDeprecatedOptionalFlag {
+		return "", nil
 	}
-	if missingValue(val, tag) {
-		err = missingValueError(tag.Name)
+
+	if value == "" && !hasDefault {
+		return "", missingValueError(ft.Name)
 	}
 	return
 }
 
-func missingValue(val string, tag TagValue) bool {
-	return val == "" && !tag.HasFlag("optional")
+func missingValueError(fieldName string) error {
+	return fmt.Errorf("config: missing value for field '%s'", fieldName)
 }
 
-func missingValueError(key string) error {
-	return fmt.Errorf("config: missing value for key '%s'", key)
+type fieldSetter func(fv reflect.Value, val string) error
+
+var setters map[reflect.Kind]fieldSetter = map[reflect.Kind]fieldSetter{
+	reflect.Int64: intSetter(64),
+	reflect.Int32: intSetter(32),
+	reflect.Int16: intSetter(16),
+	reflect.Int8:  intSetter(8),
+	reflect.Int:   intSetter(0),
+	reflect.Bool: func(fv reflect.Value, v string) error {
+		fv.SetBool(v == "true" || v == "1")
+		return nil
+	},
+	reflect.String: func(fv reflect.Value, v string) error {
+		fv.SetString(v)
+		return nil
+	},
 }
 
-func boolValue(v string) bool {
-	return v == "true" || v == "1"
-}
-
-func intValue(bitSize int, v string) (int64, error) {
-	return strconv.ParseInt(v, 10, bitSize)
+func intSetter(bitSize int) fieldSetter {
+	return func(fv reflect.Value, v string) error {
+		n, err := strconv.ParseInt(v, 10, bitSize)
+		if err != nil {
+			return err
+		}
+		fv.SetInt(n)
+		return nil
+	}
 }
