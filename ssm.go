@@ -47,7 +47,7 @@ func (s *ssmSource) Get(tag TagValue) (string, error) {
 		WithDecryption: &withDecryption,
 	})
 	if err != nil {
-		if err.Error() == ssm.ErrCodeParameterNotFound {
+		if _, ok := err.(*ssm.ParameterNotFound); ok {
 			return "", nil
 		}
 		return "", err
