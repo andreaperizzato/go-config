@@ -59,6 +59,24 @@ func TestSSMSource(t *testing.T) {
 	if err.Error() != "failed" {
 		t.Fatalf("expected to get error message 'failed', got: '%s'", err.Error())
 	}
+
+	// Test when SSM.GetParameter can't find parameter
+	// when SSM can't find a parameter, it responds with ssm.ErrCodeParameterNotFound, we should treat this the same as if a variable is not set on the environment, i.e. return "" and no error from the getter so it can get caught by the default handling logic
+	svc = mockSSM{
+		getParameter: func(in *ssm.GetParameterInput) (out *ssm.GetParameterOutput, err error) {
+			err = errors.New(ssm.ErrCodeParameterNotFound)
+			return
+		},
+	}
+	src = NewSSMSourceWithClient(&svc)
+	l = NewLoader(src)
+	err = l.Load(&sett)
+	if err == nil {
+		t.Fatal("expected to get an error, got nil")
+	}
+	if err.Error() != "config: missing value for key 'test/parameter/name'" {
+		t.Fatalf("unexpected error: '%s'", err.Error())
+	}
 }
 
 func TestSSMSourceWithSubstitutions(t *testing.T) {
