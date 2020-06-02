@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 )
@@ -64,7 +65,9 @@ func TestSSMSource(t *testing.T) {
 	// when SSM can't find a parameter, it responds with ssm.ErrCodeParameterNotFound, we should treat this the same as if a variable is not set on the environment, i.e. return "" and no error from the getter so it can get caught by the default handling logic
 	svc = mockSSM{
 		getParameter: func(in *ssm.GetParameterInput) (out *ssm.GetParameterOutput, err error) {
-			err = errors.New(ssm.ErrCodeParameterNotFound)
+			err = &ssm.ParameterNotFound{
+				Message_: aws.String("failed"),
+			}
 			return
 		},
 	}
