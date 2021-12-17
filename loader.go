@@ -131,11 +131,17 @@ func missingValueError(fieldName string) error {
 type fieldSetter func(fv reflect.Value, val string) error
 
 var setters map[reflect.Kind]fieldSetter = map[reflect.Kind]fieldSetter{
-	reflect.Int64: intSetter(64),
-	reflect.Int32: intSetter(32),
-	reflect.Int16: intSetter(16),
-	reflect.Int8:  intSetter(8),
-	reflect.Int:   intSetter(0),
+	reflect.Int64:  intSetter(64),
+	reflect.Int32:  intSetter(32),
+	reflect.Int16:  intSetter(16),
+	reflect.Int8:   intSetter(8),
+	reflect.Int:    intSetter(0),
+	reflect.Uint64: uintSetter(64),
+	reflect.Uint32: uintSetter(32),
+	reflect.Uint16: uintSetter(16),
+	reflect.Uint8:  uintSetter(8),
+	reflect.Uint:   uintSetter(0),
+
 	reflect.Bool: func(fv reflect.Value, v string) error {
 		fv.SetBool(v == "true" || v == "1")
 		return nil
@@ -153,6 +159,17 @@ func intSetter(bitSize int) fieldSetter {
 			return err
 		}
 		fv.SetInt(n)
+		return nil
+	}
+}
+
+func uintSetter(bitSize int) fieldSetter {
+	return func(fv reflect.Value, v string) error {
+		n, err := strconv.ParseUint(v, 10, bitSize)
+		if err != nil {
+			return err
+		}
+		fv.SetUint(n)
 		return nil
 	}
 }

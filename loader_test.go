@@ -230,6 +230,90 @@ func Test_SingleSource(t *testing.T) {
 				D6: 0,
 			},
 		},
+		{
+			desc: "uint field overflow",
+			v: &struct {
+				T uint8 `test:"field"`
+			}{},
+			values: map[string]string{
+				"field": "512",
+			},
+			err: `strconv.ParseUint: parsing "512": value out of range`,
+		},
+		{
+			desc: "uint field negative value",
+			v: &struct {
+				T uint8 `test:"field"`
+			}{},
+			values: map[string]string{
+				"field": "-1",
+			},
+			err: `strconv.ParseUint: parsing "-1": invalid syntax`,
+		},
+		{
+			desc: "uint field is not a number",
+			v: &struct {
+				T uint64 `test:"field"`
+			}{},
+			values: map[string]string{
+				"field": "not-a-number",
+			},
+			err: `strconv.ParseUint: parsing "not-a-number": invalid syntax`,
+		},
+		{
+			desc: "uint field",
+			v: &struct {
+				T1 uint64 `test:"field1"`
+				T2 uint32 `test:"field2"`
+				T3 uint16 `test:"field3"`
+				T4 uint8  `test:"field4"`
+				T5 uint   `test:"field5"`
+				D1 uint64 `test:"other1" default:"91"`
+				D2 uint32 `test:"other2" default:"92"`
+				D3 uint16 `test:"other3" default:"93"`
+				D4 uint8  `test:"other4" default:"94"`
+				D5 uint   `test:"other5" default:"95"`
+				D6 uint   `test:"other5" default:""`
+			}{},
+			values: map[string]string{
+				"field1": "11",
+				"field2": "22",
+				"field3": "33",
+				"field4": "44",
+				"field5": "55",
+				"other1": "",
+				"other2": "",
+				"other3": "",
+				"other4": "",
+				"other5": "",
+				"other6": "",
+			},
+			out: &struct {
+				T1 uint64 `test:"field1"`
+				T2 uint32 `test:"field2"`
+				T3 uint16 `test:"field3"`
+				T4 uint8  `test:"field4"`
+				T5 uint   `test:"field5"`
+				D1 uint64 `test:"other1" default:"91"`
+				D2 uint32 `test:"other2" default:"92"`
+				D3 uint16 `test:"other3" default:"93"`
+				D4 uint8  `test:"other4" default:"94"`
+				D5 uint   `test:"other5" default:"95"`
+				D6 uint   `test:"other5" default:""`
+			}{
+				T1: 11,
+				T2: 22,
+				T3: 33,
+				T4: 44,
+				T5: 55,
+				D1: 91,
+				D2: 92,
+				D3: 93,
+				D4: 94,
+				D5: 95,
+				D6: 0,
+			},
+		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
